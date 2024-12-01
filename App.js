@@ -1,34 +1,54 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { DeviceMotion } from "expo-sensors";
+import { WebSocket } from "react-native-websocket";
 
 export default function App() {
   const [motionData, setMotionData] = useState(null);
 
+  // Connect to the WebSocket server
+  const ws = new WebSocket("ws://<laptop-ip>:8080");
+
   useEffect(() => {
     const subscription = DeviceMotion.addListener((motion) => {
-      setMotionData(motion.accelerationIncludingGravity); // or use motion.acceleration for linear acceleration
+      const acceleration = motion.accelerationIncludingGravity;
+      setMotionData(acceleration);
+
+      // Send motion data to the WebSocket server
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(
+          JSON.stringify({
+            x: acceleration.x,
+            y: acceleration.y,
+            z: acceleration.z,
+          })
+        );
+      }
     });
 
-    // Clean up the subscription on unmount
-    return () => subscription.remove();
-  }, []);
+    // Set update interval
+    DeviceMotion.setUpdateInterval(100);
 
-  const formatData = (data) => {
-    return data ? data.toFixed(2) * 1 : "0.00";
-  };
+    // Cleanup
+    return () => {
+      subscription.remove();
+      ws.close();
+    };
+  }, [ws]);
+
+  const formatData = (data) => (data ? data.toFixed(2) * 1 : "0.00");
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Phone Acceleration (cm/s²):</Text>
+      <Text style={styles.heading}>Phone Motion Data:</Text>
       <Text style={styles.data}>
-        X-axis: {motionData ? formatData(motionData.x) : "Loading..."} cm/s²
+        X: {motionData ? formatData(motionData.x) : "Loading..."} cm/s²
       </Text>
       <Text style={styles.data}>
-        Y-axis: {motionData ? formatData(motionData.y) : "Loading..."} cm/s²
+        Y: {motionData ? formatData(motionData.y) : "Loading..."} cm/s²
       </Text>
       <Text style={styles.data}>
-        Z-axis: {motionData ? formatData(motionData.z) : "Loading..."} cm/s²
+        Z: {motionData ? formatData(motionData.z) : "Loading..."} cm/s²
       </Text>
     </View>
   );
