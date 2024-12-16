@@ -1,75 +1,100 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { DeviceMotion } from "expo-sensors";
-import { WebSocket } from "react-native-websocket";
+import React, { useState } from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { NavigationContainer } from "@react-navigation/native";
+import { View, StyleSheet } from "react-native";
+import { FontAwesome } from "@expo/vector-icons";
+
+import DeviceMotionScreen from "./page/DeviceMotion";
+import TouchPadScreen from "./page/TouchPad";
+import QRReaderScreen from "./page/QrReader";
+import { WebSocketProvider } from "./page/webSocketContext";
+
+const Tab = createBottomTabNavigator();
 
 export default function App() {
-  const [motionData, setMotionData] = useState(null);
+  const [url, setUrl] = useState("ws://example.com");
+  const [currentScreen, setCurrentScreen] = useState("Motion");
 
-  // Connect to the WebSocket server
-  const ws = new WebSocket("ws://<laptop-ip>:8080");
-
-  useEffect(() => {
-    const subscription = DeviceMotion.addListener((motion) => {
-      const acceleration = motion.accelerationIncludingGravity;
-      setMotionData(acceleration);
-
-      // Send motion data to the WebSocket server
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(
-          JSON.stringify({
-            x: acceleration.x,
-            y: acceleration.y,
-            z: acceleration.z,
-          })
-        );
-      }
-    });
-
-    // Set update interval
-    DeviceMotion.setUpdateInterval(100);
-
-    // Cleanup
-    return () => {
-      subscription.remove();
-      ws.close();
-    };
-  }, [ws]);
-
-  const formatData = (data) => (data ? data.toFixed(2) * 1 : "0.00");
+  const CameraScreen = ({ navigation }) => (
+    <QRReaderScreen
+      navigation={navigation}
+      onUrlDetected={(newUrl) => {
+        setUrl(newUrl);
+        setCurrentScreen("Motion");
+      }}
+    />
+  );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Phone Motion Data:</Text>
-      <Text style={styles.data}>
-        X: {motionData ? formatData(motionData.x) : "Loading..."} cm/s²
-      </Text>
-      <Text style={styles.data}>
-        Y: {motionData ? formatData(motionData.y) : "Loading..."} cm/s²
-      </Text>
-      <Text style={styles.data}>
-        Z: {motionData ? formatData(motionData.z) : "Loading..."} cm/s²
-      </Text>
-    </View>
+    <WebSocketProvider initialUrl={url} currentScreen={currentScreen}>
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={{
+            headerShown: false,
+            tabBarStyle: styles.tabBar,
+          }}
+          screenListeners={{
+            state: (e) => {
+              const currentRouteName = e.data.state.routes[e.data.state.index].name;
+              setCurrentScreen(currentRouteName);
+            },
+          }}
+        >
+          <Tab.Screen
+            name="Motion"
+            component={DeviceMotionScreen}
+            options={{
+              tabBarIcon: ({ color }) => (
+                <FontAwesome name="mobile-phone" size={24} color={color} />
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="Camera"
+            component={CameraScreen}
+            options={{
+              tabBarIcon: () => (
+                <View style={styles.middleButton}>
+                  <FontAwesome name="camera" size={28} color="#fff" />
+                </View>
+              ),
+            }}
+          />
+          <Tab.Screen
+            name="TouchPad"
+            component={TouchPadScreen}
+            options={{
+              tabBarIcon: ({ color }) => (
+                <FontAwesome name="hand-paper-o" size={24} color={color} />
+              ),
+            }}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
+    </WebSocketProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  tabBar: {
+    position: "absolute",
+    height: 60,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    backgroundColor: "#fff",
+    borderTopWidth: 0,
+    elevation: 10, 
+  },
+  middleButton: {
+    position: "absolute",
+    bottom: 0,
+    width: 80,
+    height: 80,
+    borderRadius: 100,
+    backgroundColor: "#007AFF",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f5f5f5",
-    padding: 20,
-  },
-  heading: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  data: {
-    fontSize: 16,
-    color: "#333",
-    marginVertical: 5,
+    borderWidth: 10,
+    borderColor: "#fff",
   },
 });

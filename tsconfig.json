@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "jsx": "react", // Use "react-jsx" if using React 17+
+    "allowJs": true,
+    "skipLibCheck": true, // Skips type checking of node_modules
+    "moduleResolution": "node", // Resolves modules like `node`
+    "resolveJsonModule": true, // For importing JSON files
+    "esModuleInterop": true, // Enables default imports for CommonJS modules
+    "isolatedModules": true, // Needed for React Native
+  },
+  "include": [
+    "src", // Your source code folder
+    "node_modules/expo-camera/**/*.ts", // Include specific node_module if necessary
+    "node_modules/expo-camera/**/*.tsx"
+  ],
+  "extends": "expo/tsconfig.base",
+}
