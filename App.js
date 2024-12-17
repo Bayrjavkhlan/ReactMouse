@@ -12,15 +12,15 @@ import { WebSocketProvider } from "./page/webSocketContext";
 const Tab = createBottomTabNavigator();
 
 export default function App() {
-  const [url, setUrl] = useState("ws://example.com");
-  const [currentScreen, setCurrentScreen] = useState("Motion");
-
+  const [url, setUrl] = useState(null);
+  const [currentScreen, setCurrentScreen] = useState("Camera");
+  
   const CameraScreen = ({ navigation }) => (
     <QRReaderScreen
       navigation={navigation}
       onUrlDetected={(newUrl) => {
         setUrl(newUrl);
-        setCurrentScreen("Motion");
+        setCurrentScreen("TouchPad");
       }}
     />
   );
@@ -29,6 +29,7 @@ export default function App() {
     <WebSocketProvider initialUrl={url} currentScreen={currentScreen}>
       <NavigationContainer>
         <Tab.Navigator
+        initialRouteName="Camera"
           screenOptions={{
             headerShown: false,
             tabBarStyle: styles.tabBar,

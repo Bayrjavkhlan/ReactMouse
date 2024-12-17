@@ -1,42 +1,75 @@
-import React, { createContext, useContext, ReactNode, useEffect, useState, useRef } from "react";
-import WebSocketManager from "./webSocketConnection";
+import React, { createContext, useContext, useRef, useEffect } from 'react';
+import WebSocketManager from './webSocketConnection';
 
-interface WebSocketProviderProps {
-  children: ReactNode;
-  initialUrl: string;
+interface WebSocketContextType {
+  motionWs: WebSocketManager | null;
+  touchWs: WebSocketManager | null;
   currentScreen: string;
 }
 
-const WebSocketContext = createContext<{manager: WebSocketManager, currentScreen: string}>({
-  manager: new WebSocketManager(''),
+const WebSocketContext = createContext<WebSocketContextType>({
+  motionWs: null,
+  touchWs: null,
   currentScreen: ''
 });
 
-export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ initialUrl, children, currentScreen }) => {
-  const wsManagerRef = useRef<WebSocketManager | null>(null);
-  const [wsManager, setWsManager] = useState<WebSocketManager | null>(null);
+interface WebSocketProviderProps {
+  children: React.ReactNode;
+  initialUrl: string | null;
+  currentScreen: string;
+}
 
+export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
+  children,
+  initialUrl,
+  currentScreen
+}) => {
+  const motionWsRef = useRef<WebSocketManager | null>(null);
+  const touchWsRef = useRef<WebSocketManager | null>(null);
+  console.log('initialUrl;\t', initialUrl);
+  console.log('currentScreen:\t', currentScreen);
+  
   useEffect(() => {
-    if (!wsManagerRef.current && initialUrl && initialUrl !== 'ws://example.com') {
-      console.log('Initializing WebSocket with URL:', initialUrl);
-      const manager = new WebSocketManager(`ws://${initialUrl}:8080`);
-      wsManagerRef.current = manager;
-      setWsManager(manager);
-      manager.connect();
+    // Skip connection if URL is empty, default, or example.com
+    if (initialUrl){
+      // Parse the base URL to get host and port
+      const basePort = 8080; // Default port for motion
 
-      setInterval(() => {
-        console.log('WebSocket connection status:', manager.isConnected);
-      }, 3000);
+      // Create URLs with different ports
+      const motionUrl = `ws://${initialUrl}:${basePort}/motion`;
+      const touchUrl = `ws://${initialUrl}:${basePort + 2}/touch`;  // Port 8082 for touch
+
+      console.log('Initializing Motion WebSocket with URL:', motionUrl);
+      const motionManager = new WebSocketManager(motionUrl);
+      motionWsRef.current = motionManager;
+      motionManager.connect();
+      console.log('motionManager - WebSocket Status123:', motionManager?.getStatus());
+      console.log('motionManager - Is Connected:', motionManager?.isConnected);
+
+      console.log('Initializing Touch WebSocket with URL:', touchUrl);
+      const touchManager = new WebSocketManager(touchUrl);
+      touchWsRef.current = touchManager;
+      touchManager.connect();
+      console.log('touchManager - WebSocket Status123:', touchManager?.getStatus());
+      console.log('touchManager - Is Connected:', touchManager?.isConnected);
+      
+      // Cleanup function
+      return () => {
+        console.log('Cleaning up WebSocket connections');
+        motionWsRef.current?.close();
+        touchWsRef.current?.close();
+      };
     }
   }, [initialUrl]);
 
-  const contextValue = {
-    manager: wsManagerRef.current || new WebSocketManager(''),
-    currentScreen
-  };
-  
   return (
-    <WebSocketContext.Provider value={contextValue}>
+    <WebSocketContext.Provider 
+      value={{ 
+        motionWs: motionWsRef.current, 
+        touchWs: touchWsRef.current, 
+        currentScreen 
+      }}
+    >
       {children}
     </WebSocketContext.Provider>
   );
@@ -44,7 +77,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ initialUrl
 
 export const useWebSocket = () => {
   const context = useContext(WebSocketContext);
-  // console.log('Using WebSocket in screen:', context.currentScreen);
-  // console.log('WebSocket connected status:', context.manager.isConnected);
+  if (!context) {
+    throw new Error('useWebSocket must be used within a WebSocketProvider');
+  }
   return context;
 };

@@ -1,10 +1,11 @@
-// WebSocketManager.ts
 export default class WebSocketManager {
     public url: string;
     private ws: WebSocket | null = null;
     public isConnected: boolean = false;
 
     constructor(url: string) {
+        console.log('url:\t', url);
+        
         this.url = url.startsWith('ws://') || url.startsWith('wss://') 
             ? url 
             : `ws://${url}`;
@@ -62,11 +63,8 @@ export default class WebSocketManager {
         }
 
         try {
-            const message = {
-                mouseData: data
-            };
-            console.log('WebSocket sending:', message);
-            this.ws.send(JSON.stringify(message));
+            console.log('WebSocket sending:', data);
+            this.ws.send(JSON.stringify(data));
         } catch (error) {
             console.error("Failed to send data over WebSocket:", error);
             this.isConnected = false;
